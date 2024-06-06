@@ -18,6 +18,18 @@ router.get("/get-categories", async (req, res) => {
     }
 });
 
+router.get("/get-main", async (req, res) => {
+    try {
+        const root = await dbx.filesListFolder({ path: "" });
+        const mainCategories = root.result.entries
+            .filter((entry) => entry[".tag"] === "folder")
+            .map((entry) => entry.name);
+        res.status(200).send(mainCategories);
+    } catch (error) {
+        console.error(error);
+        res.send("Error occurred");
+    }
+});
 async function getMainCategory() {
     try {
         const response = await dbx.filesListFolder({ path: "/main" });
