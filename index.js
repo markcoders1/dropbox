@@ -41,6 +41,9 @@ const accessToken = process.env.DBX_TOKEN;
 const dbx = new dropbox_1.Dropbox({
     accessToken,
 });
+app.get("/", (req, res) => {
+    res.send("Hello World!");
+});
 function getMainCategory() {
     return __awaiter(this, void 0, void 0, function* () {
         try {

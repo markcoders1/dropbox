@@ -11,7 +11,9 @@ const accessToken: string = process.env.DBX_TOKEN as string;
 const dbx: Dropbox = new Dropbox({
     accessToken,
 });
-
+app.get("/", (req: any, res: any) => {
+    res.send("Hello World!");
+})
 async function getMainCategory(): Promise<void> {
     try {
         const response = await dbx.filesListFolder({ path: "/main" });
