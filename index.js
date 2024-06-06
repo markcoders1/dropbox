@@ -64,16 +64,17 @@ function getCategoryData(category) {
             });
             const fileInfoPromises = response.result.entries.map((file) => __awaiter(this, void 0, void 0, function* () {
                 if (file.path_display) {
-                    const url = yield getImagePreviewUrl(file.path_display);
+                    const buffer = yield getImageThumbnailUrl(file.path_display);
+                    const url = bufferToDataUrl("image/png", buffer.fileBinary);
                     return {
                         name: file.name,
-                        url: url
+                        image: url,
                     };
                 }
                 else {
                     return {
                         name: file.name,
-                        url: "No path available"
+                        image: "No path available",
                     };
                 }
             }));
@@ -85,17 +86,22 @@ function getCategoryData(category) {
         }
     });
 }
-function getImagePreviewUrl(filePath) {
+function getImageThumbnailUrl(filePath) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const response = yield dbx.filesGetTemporaryLink({ path: filePath });
-            return response.result.link;
+            const response = yield dbx.filesGetThumbnail({
+                path: filePath,
+            });
+            return response.result;
         }
         catch (error) {
-            console.error("Error getting temporary link:", error);
+            console.error("Error getting thumbnail link:", error);
             return "";
         }
     });
 }
+function bufferToDataUrl(type, buffer) {
+    return `data:${type};base64,${buffer.toString('base64')}`;
+}
 getCategoryData("sub-1");
-// getMainCategory();
+getMainCategory();

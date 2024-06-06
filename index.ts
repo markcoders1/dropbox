@@ -11,9 +11,11 @@ const accessToken: string = process.env.DBX_TOKEN as string;
 const dbx: Dropbox = new Dropbox({
     accessToken,
 });
+
 app.get("/", (req: any, res: any) => {
     res.send("Hello World!");
-})
+});
+
 async function getMainCategory(): Promise<void> {
     try {
         const response = await dbx.filesListFolder({ path: "/main" });
@@ -33,15 +35,16 @@ async function getCategoryData(category: string): Promise<void> {
         });
         const fileInfoPromises = response.result.entries.map(async (file) => {
             if (file.path_display) {
-                const url = await getImagePreviewUrl(file.path_display);
+                const buffer = await getImageThumbnailUrl(file.path_display);                
+                const url = bufferToDataUrl("image/png", buffer.fileBinary);
                 return {
                     name: file.name,
-                    url: url
+                    image: url,
                 };
             } else {
                 return {
                     name: file.name,
-                    url: "No path available"
+                    image: "No path available",
                 };
             }
         });
@@ -52,15 +55,21 @@ async function getCategoryData(category: string): Promise<void> {
     }
 }
 
-async function getImagePreviewUrl(filePath: string): Promise<string> {
+async function getImageThumbnailUrl(filePath: string): Promise<any> {
     try {
-        const response = await dbx.filesGetTemporaryLink({ path: filePath });
-        return response.result.link; 
+        const response = await dbx.filesGetThumbnail({
+            path: filePath,
+        });
+        return response.result;
     } catch (error) {
-        console.error("Error getting temporary link:", error);
-        return "";  
+        console.error("Error getting thumbnail link:", error);
+        return "";
     }
 }
 
+function bufferToDataUrl(type: string, buffer: Buffer): string {
+    return `data:${type};base64,${buffer.toString('base64')}`;
+}
+
 getCategoryData("sub-1");
-// getMainCategory();
+getMainCategory();
