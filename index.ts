@@ -12,17 +12,6 @@ const dbx: Dropbox = new Dropbox({
     accessToken,
 });
 
-app.get("/", (req: any, res: any) => {
-    res.send("Hello World!");
-});
-
-app.get("/webhook", (req: any, res: any) => {
-    let response = req.query["challenge"];
-    response.header("Content-Type", "text/plain");
-    response.header("X-Content-Type-Option", "nosniff");
-    return response;
-});
-
 async function getMainCategory(): Promise<void> {
     try {
         const response = await dbx.filesListFolder({ path: "/main" });
@@ -45,12 +34,12 @@ async function getCategoryData(category: string): Promise<void> {
                 const url = await getImagePreviewUrl(file.path_display);
                 return {
                     name: file.name,
-                    url: url,
+                    url: url
                 };
             } else {
                 return {
                     name: file.name,
-                    url: "No path available",
+                    url: "No path available"
                 };
             }
         });
@@ -64,10 +53,10 @@ async function getCategoryData(category: string): Promise<void> {
 async function getImagePreviewUrl(filePath: string): Promise<string> {
     try {
         const response = await dbx.filesGetTemporaryLink({ path: filePath });
-        return response.result.link;
+        return response.result.link; 
     } catch (error) {
         console.error("Error getting temporary link:", error);
-        return "";
+        return "";  
     }
 }
 

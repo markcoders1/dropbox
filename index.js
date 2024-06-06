@@ -41,15 +41,6 @@ const accessToken = process.env.DBX_TOKEN;
 const dbx = new dropbox_1.Dropbox({
     accessToken,
 });
-app.get("/", (req, res) => {
-    res.send("Hello World!");
-});
-app.get("/webhook", (req, res) => {
-    let response = req.query["challenge"];
-    response.header("Content-Type", "text/plain");
-    response.header("X-Content-Type-Option", "nosniff");
-    return response;
-});
 function getMainCategory() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -73,13 +64,13 @@ function getCategoryData(category) {
                     const url = yield getImagePreviewUrl(file.path_display);
                     return {
                         name: file.name,
-                        url: url,
+                        url: url
                     };
                 }
                 else {
                     return {
                         name: file.name,
-                        url: "No path available",
+                        url: "No path available"
                     };
                 }
             }));
