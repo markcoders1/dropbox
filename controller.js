@@ -8,63 +8,45 @@ const dbx = new Dropbox({
     accessToken,
 });
 
-router.get("/get-categories", async (req, res) => {
+router.get("/get-data", async (req, res) => {
     try {
-        const mainCategories = await getMainCategory();
-        res.status(200).send(mainCategories);
+        if(!req.query.level) {
+            res.status(400).send({message:"Invalid parameters"});
+            return;
+        }
+        if (req.query.level === "0" && req.query.folder) {
+            const response = await dbx.filesListFolder({
+                path: `/${req.query.folder}`,
+            });
+            const mainCategories = response.result.entries.map(
+                (entry) => entry.name
+            );
+            res.status(200).send(mainCategories);
+        } else if (req.query.level === "0") {
+            const response = await dbx.filesListFolder({ path: "" });
+            const names = response.result.entries.map((entry) => entry.name);
+            res.status(200).send(names);
+        } else if (req.query.level === "1" && req.query.folder) {
+            const response = await dbx.filesListFolder({
+                path: `/${req.query.folder}`,
+            });
+            const fileInfo = await generateFile(response.result.entries);
+            res.status(200).send(fileInfo);
+        } else {
+            res.status(400).send({ message: "Invalid parameters" });
+        }
     } catch (error) {
         console.error(error);
-        res.send("Error occurred");
+        res.send({message:error?.error?.error_summary || "Something went wrong :("});
     }
 });
 
-router.get("/get-main", async (req, res) => {
+async function generateFile(fileInfo) {
     try {
-        const root = await dbx.filesListFolder({ path: "" });
-        const mainCategories = root.result.entries
-            .filter((entry) => entry[".tag"] === "folder")
-            .map((entry) => entry.name);
-        res.status(200).send(mainCategories);
-    } catch (error) {
-        console.error(error);
-        res.send("Error occurred");
-    }
-});
-async function getMainCategory() {
-    try {
-        const response = await dbx.filesListFolder({ path: "/main" });
-        const names = response.result.entries.map((entry) => entry.name);
-        return names;
-    } catch (error) {
-        console.error(error);
-        return [];
-    }
-}
-
-router.get("/get-category-data", async (req, res) => {
-    const category = req.query.category;
-    if (!category) {
-        res.status(400).send("Category is required");
-        return;
-    }
-    try {
-        const fileInfo = await getCategoryData(category);
-        res.status(200).send(fileInfo);
-    } catch (error) {
-        console.error(error);
-        res.status(500).send("Error occurred");
-    }
-});
-
-async function getCategoryData(category) {
-    try {
-        const response = await dbx.filesListFolder({
-            path: `/main/${category}`,
-        });
-        const fileInfoPromises = response.result.entries.map(async (file) => {
+        const fileInfoPromises = fileInfo.map(async (file) => {
             if (file.path_display) {
-                const buffer = await getImageThumbnailUrl(file.path_display);
-                const url = bufferToDataUrl("image/png", buffer.fileBinary);
+                const thumbnail = await getImageThumbnailUrl(file.path_display);
+                const url = bufferToDataUrl("image/png", thumbnail?.fileBinary);
                 return {
                     name: file.name,
                     image: url,
@@ -76,8 +58,8 @@ async function getCategoryData(category) {
                 };
             }
         });
-        const fileInfo = await Promise.all(fileInfoPromises);
-        return fileInfo;
+        const file = await Promise.all(fileInfoPromises);
+        return file;
     } catch (error) {
         console.error(error);
         return [];
