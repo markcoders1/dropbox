@@ -1,17 +1,56 @@
 const express = require("express");
 const { Dropbox } = require("dropbox");
+const { default: axios } = require("axios");
+const Model = require("./Model");
 
 const router = express.Router();
-const accessToken = process.env.DBX_TOKEN;
+const apiKey = process.env.API_KEY;
+const apiSecret = process.env.API_SECRET;
+const refreshToken = process.env.REFRESH_TOKEN;
 
-const dbx = new Dropbox({
-    accessToken,
+router.get("/refresh-token", async (req, res) => {
+    try {
+        let data = {
+            refresh_token: refreshToken,
+            grant_type: "refresh_token",
+            client_id: apiKey,
+            client_secret: apiSecret,
+        };
+
+        let config = {
+            method: "post",
+            maxBodyLength: Infinity,
+            url: "https://api.dropbox.com/oauth2/token",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            data: data,
+        };
+
+        const response = await axios(config);
+        console.log(response.data);
+        const token = new Model({
+            access_token: response.data.access_token,
+        });
+        await token.save();
+        res.send(response.data);
+    } catch (error) {
+        console.error(error);
+        res.send({
+            message: error?.error?.error_summary || "Something went wrong :(",
+        });
+    }
 });
 
 router.get("/get-data", async (req, res) => {
     try {
-        if(!req.query.level) {
-            res.status(400).send({message:"Invalid parameters"});
+        const accessToken = Model.findOne();
+        const token = accessToken.access_token;
+        const dbx = new Dropbox({
+            token,
+        });
+        if (!req.query.level) {
+            res.status(400).send({ message: "Invalid parameters" });
             return;
         }
         if (req.query.level === "0" && req.query.folder) {
@@ -37,7 +76,9 @@ router.get("/get-data", async (req, res) => {
         }
     } catch (error) {
         console.error(error);
-        res.send({message:error?.error?.error_summary || "Something went wrong :("});
+        res.send({
+            message: error?.error?.error_summary || "Something went wrong :(",
+        });
     }
 });
 
