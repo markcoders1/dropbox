@@ -47,8 +47,8 @@ async function generateFile(fileInfo) {
     try {
         const fileInfoPromises = fileInfo.map(async (file) => {
             if (file.path_display) {
-                const thumbnail = await getImageThumbnailUrl(file.path_display);
-                const url = bufferToDataUrl("image/png", thumbnail?.fileBinary);
+                const buffer = await getImageThumbnailUrl(file.path_display);
+                const url = bufferToDataUrl("image/png", buffer.fileBinary);
                 return {
                     name: file.name,
                     image: url,
@@ -60,8 +60,8 @@ async function generateFile(fileInfo) {
                 };
             }
         });
-        const file = await Promise.all(fileInfoPromises);
-        return file;
+        const fileInfo = await Promise.all(fileInfoPromises);
+        return fileInfo;
     } catch (error) {
         console.error(error);
         return [];
