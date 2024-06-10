@@ -1,14 +1,31 @@
 const express = require("express");
 const { Dropbox } = require("dropbox");
 const Model = require("./Model");
+const { default: axios } = require("axios");
 const router = express.Router();
 
 router.get("/get-data", async (req, res) => {
     try {
-        const accessToken = Model.findOne();
-        const token = accessToken?.access_token;
+        let data = {
+            refresh_token: process.env.REFRESH_TOKEN,
+            grant_type: "refresh_token",
+            client_id: process.env.API_KEY,
+            client_secret: process.env.API_SECRET,
+        };
+
+        let config = {
+            method: "post",
+            maxBodyLength: Infinity,
+            url: "https://api.dropbox.com/oauth2/token",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            data: data,
+        };
+        const response = await axios(config);
+        let accessToken = response.data.access_token;
         const dbx = new Dropbox({
-            token,
+            accessToken,
         });
         if (!req.query.level) {
             res.status(400).send({ message: "Invalid parameters" });
@@ -30,7 +47,7 @@ router.get("/get-data", async (req, res) => {
             const response = await dbx.filesListFolder({
                 path: `/${req.query.folder}`,
             });
-            const fileInfo = await generateFile(response.result.entries);
+            const fileInfo = await generateFile(response.result.entries,dbx);
             res.status(200).send(fileInfo);
         } else {
             res.status(400).send({ message: "Invalid parameters" });
@@ -43,11 +60,11 @@ router.get("/get-data", async (req, res) => {
     }
 });
 
-async function generateFile(fileInfo) {
+async function generateFile(fileInfo,dbx) {
     try {
         const fileInfoPromises = fileInfo.map(async (file) => {
             if (file.path_display) {
-                const buffer = await getImageThumbnailUrl(file.path_display);
+                const buffer = await getImageThumbnailUrl(file.path_display,dbx);
                 const url = bufferToDataUrl("image/png", buffer.fileBinary);
                 return {
                     name: file.name,
@@ -60,15 +77,15 @@ async function generateFile(fileInfo) {
                 };
             }
         });
-        const fileInfo = await Promise.all(fileInfoPromises);
-        return fileInfo;
+        const file = await Promise.all(fileInfoPromises);
+        return file;
     } catch (error) {
         console.error(error);
         return [];
     }
 }
 
-async function getImageThumbnailUrl(filePath) {
+async function getImageThumbnailUrl(filePath,dbx) {
     try {
         const response = await dbx.filesGetThumbnail({
             path: filePath,
